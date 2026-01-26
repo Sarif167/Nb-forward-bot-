@@ -42,6 +42,20 @@ async def add_target_to_source(user_id, source_id, target_id, source_title, targ
         })
         return "created"
 
+async def remove_target_from_source(user_id, source_id, target_id):
+    result = await channel_mappings.update_one(
+        {"user_id": user_id, "source_id": source_id, "target_ids": {"$exists": True}},
+        {"$pull": {"target_ids": target_id}}
+    )
+    
+    if result.modified_count > 0:
+        mapping = await channel_mappings.find_one({"user_id": user_id, "source_id": source_id})
+        if not mapping or not mapping.get('target_ids') or len(mapping.get('target_ids', [])) == 0:
+            await channel_mappings.delete_one({"user_id": user_id, "source_id": source_id})
+        return "removed"
+    return "not_found"
+    
+
 async def remove_source(user_id, source_id):
     result = await channel_mappings.delete_one({
         "user_id": user_id,
