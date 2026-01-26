@@ -23,7 +23,8 @@ I Am An Auto-Forward Bot. I Forward Files From Source Channels To Target Channel
 /help - Show This Help Message.
 /about - Show Information About Me.
 /set &lt;source_id&gt; &lt;target_id&gt; - Add Target To Source
-/rem &lt;source_id&gt; - Remove Source
+/remove_target &lt;source_id&gt; &lt;target_id&gt; - Remove A Target From Source
+/remove_source &lt;source_id&gt; - Remove Source
 /list - View All Set Channels 
 /clear - Clear All Mappings
 
@@ -161,7 +162,61 @@ async def set_channels(client, message: Message):
             parse_mode=enums.ParseMode.HTML
         )
 
-@Client.on_message(filters.command("rem") & filters.private)
+@Client.on_message(filters.command("remove_target") & filters.private)
+async def remove_target_channel(client, message: Message):
+    user_id = message.from_user.id
+    
+    if len(message.command) < 3:
+        await message.reply_text(
+            "<b>❌ Usage:</b> <code>/rem &lt;source_id&gt; &lt;target_id&gt;</code>\n\n"
+            "<b>Examples:</b>\n"
+            "<code>/rem -1001234567890 -1009876543210</code>",
+            parse_mode=enums.ParseMode.HTML
+        )
+        return
+    
+    source_input = message.command[1]
+    target_input = message.command[2]
+    
+    try:
+        source_chat = await client.get_chat(source_input)
+        source_id = source_chat.id
+        source_title = source_chat.title
+
+        target_chat = await client.get_chat(target_input)
+        target_id = target_chat.id
+        target_title = target_chat.title
+        
+        result = await database.remove_target_from_source(user_id, source_id, target_id)
+        
+        if result == "removed":
+            await message.reply_text(
+                f"<b>✅ Target Removed Successfully!</b>\n\n"
+                f"<b>📥 Source:</b> {source_title}\n"
+                f"   <code>{source_id}</code>\n\n"
+                f"<b>🗑️ Target:</b> {target_title}\n"
+                f"   <code>{target_id}</code>\n\n"
+                f"Target Channel Has Been Removed From This Source Mapping.",
+                parse_mode=enums.ParseMode.HTML
+            )
+        else:
+            await message.reply_text(
+                f"<b>⚠️ Not Found:</b>\n\n"
+                f"<b>📥 Source:</b> {source_title}\n"
+                f"<b>🗑️ Target:</b> {target_title}\n\n"
+                f"No Mapping Exists For This Source-target Pair.\n\n"
+                f"Use <code>/list</code> To See Your Current Mappings.",
+                parse_mode=enums.ParseMode.HTML
+            )
+            
+    except Exception as e:
+        await message.reply_text(
+            f"<b>❌ Error:</b> {e}\n\n"
+            f"Make sure both channel IDs are valid and accessible.",
+            parse_mode=enums.ParseMode.HTML
+        )
+        
+@Client.on_message(filters.command("remove_source") & filters.private)
 async def remove_channel(client, message: Message):
     user_id = message.from_user.id
     
